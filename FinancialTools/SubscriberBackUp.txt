@@ -1,0 +1,773 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace FinancialTools
+{   
+
+    public class Subscriber
+    {
+
+        private String _Id;
+        private Decimal _NetDueAmountDB = default;
+        private Decimal _NetDueAmount = default;
+        private Decimal _RemainingAmount;
+
+        private List<Transaction> _Bills = default;
+        private List<Transaction> _DiscretionaryItems = default;
+        private List<Transaction> _Payments = default;
+        private List<Transaction> _Rates = default;
+        private List<Transaction> _DerivedPayments = default;
+        private List<Eligibility> _Eligibilities = default;
+        
+        private DateTime _MinDate;
+        private DateTime _MaxDate;
+        private string _FirstName;
+        private string _LastName;
+        private string _FullName;
+        private string _Sex;
+        
+
+        private Decimal _TotalBills;
+        private Decimal _TotalDiscretionaryItems;
+        private Decimal _TotalPayments;
+        private Decimal _TotalRates;
+        private Decimal _TotalDerivedPayments;
+        
+        private int _MonthCount;
+        private int _PaidMonthCount;
+        private int _UnpaidMonthCount;
+        private int _LastUnpaidMonthCount;
+
+
+
+        public String Id { get { return _Id; } set { _Id = value; } }
+
+        public Decimal NetDueAmountDB { get { return _NetDueAmountDB; } set { _NetDueAmountDB = value; } }
+        public Decimal NetDueAmount { get { return _NetDueAmount; } set { _NetDueAmount = value; } }
+        public Decimal RemainingAmount { get { return _RemainingAmount; } set { _RemainingAmount = value; } }
+
+        public List<Transaction> DiscretionaryItems { get { return _DiscretionaryItems; } set { _DiscretionaryItems = value; } }
+        public List<Transaction> Bills { get { return _Bills; } set { _Bills = value; } }
+        public List<Transaction> Rates { get { return _Rates; } set { _Rates = value; } }
+        public List<Transaction> DerivedPayments { get { return _DerivedPayments; } set { _DerivedPayments = value; } }
+        public List<Eligibility> Eligibilities { get { return _Eligibilities; } set { _Eligibilities = value; } }
+        
+
+        public Decimal TotalBills { get { return _TotalBills; } set { _TotalBills = value; } }
+        public Decimal TotalDiscretionaryItems { get { return _TotalDiscretionaryItems; } set { _TotalDiscretionaryItems = value; } }
+        public Decimal TotalPayments { get { return _TotalPayments; } set { _TotalPayments = value; } }
+        public Decimal TotalDerivedPayments { get { return _TotalDerivedPayments; } set { _TotalDerivedPayments = value; } }
+        public int MonthCount { get { return _MonthCount; } set { _MonthCount = value; } }
+        public int PaidMonthCount { get { return _PaidMonthCount; } set { _PaidMonthCount = value; } }
+        public int UnpaidMonthCount { get { return _UnpaidMonthCount; } set { _UnpaidMonthCount = value; } }
+        public int LastUnpaidMonthCount { get { return _LastUnpaidMonthCount; } set { _LastUnpaidMonthCount = value; } }
+        public String FirstName{ get { return _FirstName; } set { _FirstName = value; } }
+        public String LastName { get { return _LastName; } set { _LastName = value; } }
+        public String FullName { get { return _FullName; } set { _FullName = value; } }
+        public String Sex { get { return _Sex; } set { _Sex = value; } }
+
+
+
+
+        public Subscriber(
+            String Id,
+            Decimal NetDueAmountDB = default,
+            List<Transaction> Bills = default,
+            List<Transaction> DiscretionaryItems = default,
+            List<Transaction> Payments = default
+
+        )
+        {
+
+            this._Id = Id;
+            this._NetDueAmountDB = NetDueAmountDB;
+            this._Bills = Bills;
+            this._DiscretionaryItems = DiscretionaryItems;
+            this._Payments = Payments;
+            _MinDate = new DateTime(9999, 1, 1);
+            _MaxDate = new DateTime(1, 1, 1);
+
+        }
+  
+        public void AddBill(Transaction transaction)
+        {
+            if (transaction != default)
+            {
+                if (_Bills == default) _Bills = new List<Transaction>();
+                _Bills.Add(transaction);
+                _TotalBills += transaction.Amount;
+                if ((transaction.Amount>0) && (transaction.EffectiveDate < _MinDate)) _MinDate = transaction.EffectiveDate;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate > _MaxDate)) _MaxDate = transaction.EffectiveDate;
+            }
+        }
+        public void AddDiscretionaryItem(Transaction transaction)
+        {
+            if (transaction != default)
+            {
+                if (_DiscretionaryItems == default) _DiscretionaryItems = new List<Transaction>();
+                _DiscretionaryItems.Add(transaction);
+                _TotalDiscretionaryItems += transaction.Amount;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate < _MinDate)) _MinDate = transaction.EffectiveDate;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate > _MaxDate)) _MaxDate = transaction.EffectiveDate;
+            }
+        }
+        public void AddPayment(Transaction transaction)
+        {
+            if (transaction != default)
+            {
+                if (_Payments == default) _Payments = new List<Transaction>();
+                _Payments.Add(transaction);
+                _TotalPayments += transaction.Amount;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate < _MinDate)) _MinDate = transaction.EffectiveDate;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate > _MaxDate)) _MaxDate = transaction.EffectiveDate;
+            }
+        }
+        public void AddEligibility(Eligibility eligibility)
+        {
+            if (eligibility != default)
+            {
+                if (_Eligibilities == default) _Eligibilities = new List<Eligibility>();
+                _Eligibilities.Add(eligibility);
+                Eligibility LastEligibility = _Eligibilities.OrderByDescending(e => e.EffectiveDate).ToList().Last();
+                _FirstName = LastEligibility.FirstName;
+                _LastName = LastEligibility.LastName;
+                _FullName = LastEligibility.FirstName + " " + LastEligibility.LastName;
+                _Sex = LastEligibility.Sex;
+                if ((eligibility.Eligible) && (eligibility.EffectiveDate < _MinDate)) _MinDate = eligibility.EffectiveDate;
+                if (eligibility.EffectiveDate > _MaxDate) _MaxDate = eligibility.EffectiveDate;
+            }
+        }
+
+        public void AddRate(Transaction transaction)
+        {
+            if (transaction != default)
+            {
+                if (_Rates == default) _Rates = new List<Transaction>();
+                _Rates.Add(transaction);
+                _TotalRates += transaction.Amount;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate < _MinDate)) _MinDate = transaction.EffectiveDate;
+                if ((transaction.Amount > 0) && (transaction.EffectiveDate > _MaxDate)) _MaxDate = transaction.EffectiveDate;
+            }
+        }
+
+        public void AddDerivedPayment(Transaction transaction)
+        {
+            if (transaction != default)
+            {
+                if (_DerivedPayments == default) _DerivedPayments = new List<Transaction>();
+                _DerivedPayments.Add(transaction);
+                _TotalDerivedPayments += transaction.Amount;
+                _PaidMonthCount += 1;
+                
+            }
+        }
+
+
+
+        public List<CKComb> GetCKCombList()
+        {
+            List<CKComb> CKCombList = new List<CKComb>();
+
+
+            foreach (Eligibility eligibility in _Eligibilities)
+            {
+                CKComb CKComb = new CKComb(eligibility.SbsbCK, eligibility.MemeCK, eligibility.BleiCK);
+                if (!CKCombList.Any(ckcomb => (ckcomb.SbsbCK == CKComb.SbsbCK) && (ckcomb.MemeCK == CKComb.MemeCK) && (ckcomb.BleiCK == CKComb.BleiCK))) 
+                    CKCombList.Add(CKComb);
+            }
+
+
+            return CKCombList;
+        }
+        public List<CKComb> GetCKCombByGrgrCKList (List<int> GrgrCKList)
+        {
+            List<CKComb> CKCombList = new List<CKComb>();
+
+            List<Eligibility> EligibilitiyList = _Eligibilities.FindAll(elig =>  GrgrCKList.Contains(elig.GrgrCK));
+
+
+            foreach (Eligibility eligibility in EligibilitiyList)
+            {
+                CKComb CKComb = new CKComb(eligibility.SbsbCK, eligibility.MemeCK, eligibility.BleiCK);
+                if (!CKCombList.Any(ckcomb => (ckcomb.SbsbCK == CKComb.SbsbCK)&& (ckcomb.MemeCK == CKComb.MemeCK) && (ckcomb.BleiCK == CKComb.BleiCK))) CKCombList.Add(CKComb);
+            }
+
+
+            return CKCombList;
+        }
+
+        public List<CKComb> GetCKCombByCspiIDList(List<string> CspiIDList)
+        {
+            List<CKComb> CKCombList = new List<CKComb>();
+
+            List<Eligibility> EligibilitiyList = _Eligibilities.FindAll(elig => CspiIDList.Contains(elig.CspiID));
+
+
+            foreach (Eligibility eligibility in EligibilitiyList)
+            {
+                CKComb CKComb = new CKComb(eligibility.SbsbCK, eligibility.MemeCK, eligibility.BleiCK);
+                if (!CKCombList.Any(ckcomb => (ckcomb.SbsbCK == CKComb.SbsbCK) && (ckcomb.MemeCK == CKComb.MemeCK) && (ckcomb.BleiCK == CKComb.BleiCK))) CKCombList.Add(CKComb);
+            }
+
+            return CKCombList;
+        }
+
+        public List<CKComb> GetCKCombByPdpdIDList(List<string> PdpdIDList)
+        {
+            List<CKComb> CKCombList = new List<CKComb>();
+
+            List<Eligibility> EligibilitiyList = _Eligibilities.FindAll(elig => PdpdIDList.Contains(elig.PdpdID));
+
+
+            foreach (Eligibility eligibility in EligibilitiyList)
+            {
+                CKComb CKComb = new CKComb(eligibility.SbsbCK, eligibility.MemeCK, eligibility.BleiCK);
+                if (!CKCombList.Any(ckcomb => (ckcomb.SbsbCK == CKComb.SbsbCK) && (ckcomb.MemeCK == CKComb.MemeCK) && (ckcomb.BleiCK == CKComb.BleiCK))) CKCombList.Add(CKComb);
+            }
+
+            return CKCombList;
+        }
+        public List<CKComb> GetCKCombByCscsIDList(List<string> CscsIDList)
+        {
+            List<CKComb> CKCombList = new List<CKComb>();
+
+            List<Eligibility> EligibilitiyList = _Eligibilities.FindAll(elig => CscsIDList.Contains(elig.CscsID));
+
+
+            foreach (Eligibility eligibility in EligibilitiyList)
+            {
+                CKComb CKComb = new CKComb(eligibility.SbsbCK, eligibility.MemeCK, eligibility.BleiCK);
+                if (!CKCombList.Any(ckcomb => (ckcomb.SbsbCK == CKComb.SbsbCK) && (ckcomb.MemeCK == CKComb.MemeCK) && (ckcomb.BleiCK == CKComb.BleiCK))) CKCombList.Add(CKComb);
+            }
+
+            return CKCombList;
+        }
+        public decimal GetPaymentOnDate(DateTime date, List<int> BleiCKList = default)
+        {
+            decimal total = 0;
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            foreach (int blei_ck in BleiCKList)
+            {
+                if ((_Payments != null)&& _Payments.Any(payment => (payment.BleiCK == blei_ck) && (payment.EffectiveDate.Year == date.Year) && (payment.EffectiveDate.Month == date.Month)))
+                {
+                    List<Transaction> AllPaymentsInMonth = _Payments.FindAll(payment => (payment.BleiCK == blei_ck) && (payment.EffectiveDate.Year == date.Year) && (payment.EffectiveDate.Month == date.Month));
+                    foreach (Transaction transaction in AllPaymentsInMonth) total += transaction.Amount;
+                }
+            }
+            return total;
+        }
+        public decimal GetDiscretionaryItemOnDate(DateTime date, List<int> BleiCKList = default)
+        {
+            decimal total = 0;
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            foreach (int blei_ck in BleiCKList)
+            {
+                if ((_DiscretionaryItems != null)&& _DiscretionaryItems.Any(dbi => (dbi.EffectiveDate.Year == date.Year) && (dbi.EffectiveDate.Month == date.Month) && (dbi.BleiCK == blei_ck)))
+                {
+                    List<Transaction> AllDiscretionaryItemsInMonth = _DiscretionaryItems.FindAll(dbi => (dbi.EffectiveDate.Year == date.Year) && (dbi.EffectiveDate.Month == date.Month) && (dbi.BleiCK == blei_ck));
+                    foreach (Transaction transaction in AllDiscretionaryItemsInMonth) total += transaction.Amount;
+                }
+            }
+            return total;
+        }
+        public decimal GetRateOnDate(DateTime date, List<int> SbsbCKList = default, List<int> MemeCKList = default)
+        {
+            if (SbsbCKList == default)
+            {
+                SbsbCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    SbsbCKList.Add(CKComb.SbsbCK);
+
+                }
+
+            }
+            if (MemeCKList == default)
+            {
+                List<CKComb> CKCombList = GetCKCombList();
+                MemeCKList = new List<int>();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    
+                    MemeCKList.Add(CKComb.MemeCK);
+                }
+
+            }
+            decimal Rate = 0;
+            if ((_Rates != null)&& _Rates.Any(rate => (((rate.EffectiveDate.Year == date.Year) && (rate.EffectiveDate.Month <= date.Month)) || (rate.EffectiveDate.Year < date.Year)) && SbsbCKList.Contains(rate.SbsbCK)))
+            { 
+                Transaction RecentRate = _Rates.Last(rate => (((rate.EffectiveDate.Year == date.Year) && (rate.EffectiveDate.Month <= date.Month)) || (rate.EffectiveDate.Year < date.Year)) && SbsbCKList.Contains(rate.SbsbCK));
+                Rate = RecentRate.Amount * (GetEligibilityOnDate(date, MemeCKList) ? 1 : 0);
+            }
+
+            
+
+            return Rate;
+        }
+
+        public bool GetEligibilityOnDate(DateTime date, List<int> MemeCKList = default)
+        {
+
+            bool eligibility = false;
+            if (MemeCKList == default)
+            {
+                List<CKComb> CKCombList = GetCKCombList();
+                MemeCKList = new List<int>();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    MemeCKList.Add(CKComb.MemeCK);
+
+                }
+
+            }
+            if ((_Eligibilities != null) && _Eligibilities.Any(elig => (((elig.EffectiveDate.Year == date.Year) && (elig.EffectiveDate.Month <= date.Month)) || (elig.EffectiveDate.Year < date.Year)) && MemeCKList.Contains(elig.MemeCK)))
+            {
+                Eligibility RecentElegibility = _Eligibilities.Last(elig => (((elig.EffectiveDate.Year == date.Year) && (elig.EffectiveDate.Month <= date.Month)) || (elig.EffectiveDate.Year < date.Year)) && MemeCKList.Contains(elig.MemeCK));
+                eligibility = RecentElegibility.Eligible;
+            }
+
+            return eligibility;
+
+        }
+        public decimal GetBillOnDate(DateTime date, List<int> BleiCKList = default)
+        {
+
+            decimal total = 0;
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            if ((_Bills != null)&& _Bills.Any(bill => (bill.EffectiveDate.Year == date.Year) && (bill.EffectiveDate.Month == date.Month) && BleiCKList.Contains(bill.BleiCK)))
+            {
+                List<Transaction> AllBillsInMonth = _Bills.FindAll(bill => (bill.EffectiveDate.Year == date.Year) && (bill.EffectiveDate.Month == date.Month) && BleiCKList.Contains(bill.BleiCK));
+                foreach (Transaction transaction in AllBillsInMonth) total += transaction.Amount;
+            }
+            return total;
+            
+        }
+        public decimal GetTotalRateOnDate(DateTime date, List<int> SbsbCKList = default,  List<int> MemeCKList = default)
+        {
+            if (SbsbCKList == default)
+            {
+                SbsbCKList = new List<int>();
+
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    SbsbCKList.Add(CKComb.SbsbCK);
+
+                }
+
+            }
+            if (MemeCKList == default)
+            {
+                MemeCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    MemeCKList.Add(CKComb.MemeCK);
+                }
+
+            }
+
+            decimal total = 0;
+            int months = (date.Year - _MinDate.Year) * 12 + date.Month - _MinDate.Month;
+            for (int month = 0; month <= months ; month++)
+            {
+                total += GetRateOnDate(new DateTime(_MinDate.AddMonths(month).Year, _MinDate.AddMonths(month).Month, 1), SbsbCKList, MemeCKList);
+            }
+            return total;
+
+        }
+        
+
+        public decimal GetTotalPaymentOnDate(DateTime date, List<int> BleiCKList = default)
+        {
+            decimal total = 0;
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            int months = (date.Year - _MinDate.Year) * 12 + date.Month - _MinDate.Month;
+            for (int month = 0; month <= months; month++)
+            {
+                total += GetPaymentOnDate(new DateTime(_MinDate.AddMonths(month).Year, _MinDate.AddMonths(month).Month, 1), BleiCKList);
+            }
+            return total;
+
+        }
+        public decimal GetTotalBillOnDate(DateTime date, List<int> BleiCKList = default)
+        {
+            decimal total = 0;
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            int months = (date.Year - _MinDate.Year) * 12 + date.Month - _MinDate.Month;
+            for (int month = 0; month <= months; month++)
+            {
+                total += GetBillOnDate(new DateTime(_MinDate.AddMonths(month).Year, _MinDate.AddMonths(month).Month, 1), BleiCKList);
+            }
+            return total;
+
+        }
+        public decimal GetTotalDiscretionaryItemOnDate(DateTime date, List<int> BleiCKList = default)
+        {
+            decimal total = 0;
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            int months = (date.Year - _MinDate.Year) * 12 + date.Month - _MinDate.Month;
+            for (int month = 0; month <= months; month++)
+            {
+                total += GetDiscretionaryItemOnDate(new DateTime(_MinDate.AddMonths(month).Year, _MinDate.AddMonths(month).Month, 1), BleiCKList);
+            }
+            return total;
+
+        }
+        public decimal GetTotalOnDate(DateTime date, List<int> SbsbCKList = default, List<int> MemeCKList = default, List<int> BleiCKList = default)
+        {
+            if (SbsbCKList == default)
+            {
+                SbsbCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    SbsbCKList.Add(CKComb.SbsbCK);
+
+                }
+
+            }
+            if (MemeCKList == default)
+            {
+                MemeCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    MemeCKList.Add(CKComb.MemeCK);
+
+                }
+
+            }
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            
+            
+            decimal total = GetTotalDiscretionaryItemOnDate(date, BleiCKList) + GetTotalPaymentOnDate(date, BleiCKList) - GetTotalRateOnDate(date, SbsbCKList, MemeCKList);
+            return total;
+
+        }
+
+        public void CalculateDerivedPayments(List<int> SbsbCKList = default, List<int> MemeCKList = default, List<int> BleiCKList = default, DateTime? MaxDate=null)
+        {
+            if (MaxDate == null) MaxDate = new DateTime(DateTime.Now.AddMonths(1).Year, DateTime.Now.AddMonths(1).Month, 1);
+            if (SbsbCKList == default)
+            {
+                List<CKComb> CKCombList = GetCKCombList();
+                SbsbCKList = new List<int>();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    SbsbCKList.Add(CKComb.SbsbCK);
+
+                }
+
+            }
+            if (MemeCKList == default)
+            {
+                MemeCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    MemeCKList.Add(CKComb.MemeCK);
+
+                }
+
+            }
+            if (BleiCKList == default)
+            {
+                BleiCKList = new List<int>();
+                List<CKComb> CKCombList = GetCKCombList();
+                foreach (CKComb CKComb in CKCombList)
+                {
+                    BleiCKList.Add(CKComb.BleiCK);
+
+                }
+
+            }
+            decimal total = _TotalPayments;
+            _PaidMonthCount = 0;
+            _MonthCount = 0;
+            _LastUnpaidMonthCount = 0;
+            _UnpaidMonthCount = 0;
+            int months = (((DateTime)MaxDate).Year - _MinDate.Year) * 12 + ((DateTime)MaxDate).Month - _MinDate.Month;
+            for (int month = 0; month <= months; month++)
+            {
+                /*DateTime date = new DateTime(_MinDate.AddMonths(month).Year, _MinDate.AddMonths(month).Month, 1);
+                total += GetTotalDiscretionaryItemOnDate(date, BleiCKList) - GetTotalRateOnDate(date, SbsbCKList, MemeCKList) ;
+                decimal rate = GetRateOnDate(date, SbsbCKList, MemeCKList);
+                if (total >= rate)
+                {
+                    Transaction transaction = new Transaction(rate, date, date, SbsbCKList.First(), MemeCKList.First(), BleiCKList.First(), default, default, default, default, default, true);
+                    total -= rate;
+                }*/
+                DateTime date = new DateTime(_MinDate.AddMonths(month).Year, _MinDate.AddMonths(month).Month, 1);
+                decimal rate = GetRateOnDate(date, SbsbCKList, MemeCKList);
+                total += GetDiscretionaryItemOnDate(date, BleiCKList);
+                _MonthCount++;
+                _UnpaidMonthCount++;
+                _LastUnpaidMonthCount++;
+                if ((total >= rate)&&(rate>0))
+                {
+                    Transaction transaction = new Transaction(rate, date, date, SbsbCKList.First(), MemeCKList.First(), BleiCKList.First(), default, default, default, default, default, true);
+                    AddDerivedPayment(transaction);
+                    total-= rate;
+                    _LastUnpaidMonthCount = 0;
+                    _UnpaidMonthCount--;
+                }
+
+            }
+            _PaidMonthCount = _MonthCount - _UnpaidMonthCount;
+            _RemainingAmount = total;
+        }
+        public decimal GetDerivedPaymentOnDate( DateTime date)
+        {
+            decimal DerivedPayment = 0;
+            if(_DerivedPayments != null) 
+                if (_DerivedPayments.FirstOrDefault(t => new DateTime(t.EffectiveDate.Year, t.EffectiveDate.Month,1) == new DateTime(date.Year, date.Month, 1)) !=null) DerivedPayment = _DerivedPayments.First(t => new DateTime(t.EffectiveDate.Year, t.EffectiveDate.Month, 1) == new DateTime(date.Year, date.Month, 1)).Amount;
+            return DerivedPayment;
+        }
+        public DataTable GetInfoTable(DateTime? dateIn =null, List<int> GrgrCKList = default, List<string> CspiIDList = default, List<string> PdpdIDList = default, List<string> CscsIDList = default)
+        {
+            
+            List<CKComb> CKCombList = GetCKCombList();
+
+
+            
+            if (GrgrCKList != null)
+                if (GrgrCKList.Count > 0) CKCombList.RemoveAll(item1 => !GetCKCombByGrgrCKList(GrgrCKList).Any(item2 => ((item1.SbsbCK == item2.SbsbCK) && (item1.MemeCK == item2.MemeCK) && (item1.BleiCK == item2.BleiCK))));
+            if (CspiIDList != null)
+                if (CspiIDList.Count > 0) CKCombList.RemoveAll(item1 => !GetCKCombByCspiIDList(CspiIDList).Any(item2 => ((item1.SbsbCK == item2.SbsbCK) && (item1.MemeCK == item2.MemeCK) && (item1.BleiCK == item2.BleiCK))));
+            if (PdpdIDList != null)
+                if (PdpdIDList.Count > 0) CKCombList.RemoveAll(item1 => !GetCKCombByPdpdIDList(PdpdIDList).Any(item2 => ((item1.SbsbCK == item2.SbsbCK) && (item1.MemeCK == item2.MemeCK) && (item1.BleiCK == item2.BleiCK))));
+            if (CscsIDList != null)
+                if (CscsIDList.Count > 0) CKCombList.RemoveAll(item1 => !GetCKCombByCscsIDList(CscsIDList).Any(item2 => ((item1.SbsbCK == item2.SbsbCK) && (item1.MemeCK == item2.MemeCK) && (item1.BleiCK == item2.BleiCK))));
+            DateTime now = DateTime.Now;
+            now = now.AddMonths(1);
+            DateTime date = new DateTime(now.Year, now.Month, 1);
+            if (dateIn != null) date =(DateTime) dateIn;
+
+            
+            DateTime MinDate = _MinDate;
+            DateTime MaxDate = date;
+            
+            DataTable tblSpenddownCalculations = new DataTable();
+            
+            tblSpenddownCalculations.Columns.Add("Date", typeof(DateTime));
+            tblSpenddownCalculations.Columns.Add("ID", typeof(string));
+            tblSpenddownCalculations.Columns.Add("First Name", typeof(string));
+            tblSpenddownCalculations.Columns.Add("Last Name", typeof(string));
+            tblSpenddownCalculations.Columns.Add("Full Name", typeof(string));
+            tblSpenddownCalculations.Columns.Add("Rate", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Billed", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Adjmnts", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Paid", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Expenses", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Paid Months", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Accumulated Balance", typeof(decimal));
+            tblSpenddownCalculations.Columns.Add("Eligibility", typeof(string));
+            
+            int months = ((MaxDate.Year - MinDate.Year) * 12) + MaxDate.Month - MinDate.Month;
+            foreach (CKComb CKComb in CKCombList)
+            {
+                List<int> BleiCKList = new List<int>();
+
+                List<int> SbsbCKList = new List<int>();
+
+                List<int> MemeCKList = new List<int>();
+                string FirstName = default, LastName = default, FullName = default;
+                CalculateDerivedPayments(MaxDate: MaxDate);
+
+
+                BleiCKList.Add(CKComb.BleiCK);
+
+                SbsbCKList.Add(CKComb.SbsbCK);
+
+                MemeCKList.Add(CKComb.MemeCK);
+
+
+                for (int month = 0; month <= months; month++)
+                {
+
+                    DateTime CurrentDate = new DateTime(MinDate.AddMonths(month).Year, MinDate.AddMonths(month).Month, 1);
+                    decimal rate = GetRateOnDate(CurrentDate, SbsbCKList, MemeCKList);
+                    decimal bill = GetBillOnDate(CurrentDate, BleiCKList);
+                    decimal adjustment = bill - rate;
+                    tblSpenddownCalculations.Rows.Add(
+                            CurrentDate,
+                            _Id,
+                            _FirstName,
+                            _LastName,
+                            _FullName,
+                            rate,
+                            bill,
+                            bill - rate,
+                            GetPaymentOnDate(CurrentDate, BleiCKList),
+                            GetDiscretionaryItemOnDate(CurrentDate, BleiCKList),
+                            GetDerivedPaymentOnDate(CurrentDate),
+                            GetTotalOnDate(CurrentDate, SbsbCKList, MemeCKList, BleiCKList),
+                            (GetEligibilityOnDate(CurrentDate, MemeCKList) ? "YES" : "NO")
+
+                        );
+
+                }
+
+                if (true)
+                {
+                    decimal totalRate = GetTotalRateOnDate(MaxDate, SbsbCKList, MemeCKList),
+                        totalBilled = GetTotalBillOnDate(MaxDate, BleiCKList),
+
+                        totalPaid = GetTotalPaymentOnDate(MaxDate, BleiCKList),
+                        totalExpenses = GetTotalDiscretionaryItemOnDate(MaxDate, BleiCKList),
+                        totalFullyPaidMonths = (Decimal)tblSpenddownCalculations.Compute("SUM([Paid Months])", string.Empty);
+
+
+                    tblSpenddownCalculations.Rows.Add(null,
+                                                    string.Empty,
+                                                    string.Empty,
+                                                    "Total:",
+                                                    string.Empty,
+
+                                                    totalRate,
+                                                    totalBilled,
+                                                    totalBilled - totalRate,
+                                                    totalPaid,
+                                                    totalExpenses,
+                                                    totalFullyPaidMonths);
+
+                    tblSpenddownCalculations.Rows.Add(null,
+                            string.Empty,
+                            string.Empty,
+                            "Real rate balance: ",
+                            "[Rate]-([Paid]+[Expenses])",
+
+                            totalRate - totalPaid - totalExpenses);
+                    tblSpenddownCalculations.Rows.Add(null,
+                        string.Empty,
+                         string.Empty,
+                        "Billed rate balance:",
+                        "[Billed]-([Paid]+[Expenses])",
+
+                        totalBilled - totalPaid - totalExpenses);
+                    tblSpenddownCalculations.Rows.Add(null,
+                            string.Empty,
+                            string.Empty,
+                            "Database balance: ",
+                            string.Empty,
+
+                            _NetDueAmountDB);
+                    tblSpenddownCalculations.Rows.Add(null,
+                        string.Empty,
+                        string.Empty,
+                        "Not spent amount: ",
+                        string.Empty,
+
+                        _RemainingAmount);
+
+                    tblSpenddownCalculations.Rows.Add(null,
+                                        string.Empty,
+                                        string.Empty,
+                                        "Months paid: ",
+                                        string.Empty,
+
+                                        _PaidMonthCount);
+                    tblSpenddownCalculations.Rows.Add(null,
+                            string.Empty,
+                            string.Empty,
+                            "Months not paid: ",
+                            string.Empty,
+
+                            _UnpaidMonthCount);
+                    tblSpenddownCalculations.Rows.Add(null,
+                          string.Empty,
+                          string.Empty,
+                          "Month unpaid from the last payment: ",
+                          string.Empty,
+
+                          _LastUnpaidMonthCount);
+                    tblSpenddownCalculations.Rows.Add(null,
+                                          string.Empty,
+                                          string.Empty,
+                                          "Total months: ",
+                                          string.Empty,
+
+                                          _MonthCount);
+                }
+            }
+
+            return tblSpenddownCalculations;
+        }
+    }
+}
